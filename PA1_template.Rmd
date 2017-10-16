@@ -1,25 +1,93 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
+title: "Reproducible Research: Peer Assignment 1"
+output:
   html_document:
     keep_md: true
 ---
 
+## Load and Process Data
+```{r}
+setwd("D:/Coursera")
+stepData <- read.csv("activity.csv")
+stepData$date <- as.Date(stepData$date, format = "%Y-%m-%d")
+```
 
-## Loading and preprocessing the data
+## What is the total number of steps taken per day?
+rm.na = TRUE to ignore missing values.
+```{r}
+steps <- aggregate(steps ~ date, rm.na = TRUE, data = stepData, FUN = sum)
+```
 
+### Histogram of steps per day
+```{r}
+plot(steps, type = "h", lwd = 5,
+	xlab = "Date", ylab = "Steps", main = "Total Steps per Day")
+```
 
-
-## What is mean total number of steps taken per day?
-
-
+### Calculate and report the mean and median of the total number of steps per day
+```{r}
+aggregate(steps ~ date, data = stepData, FUN = mean)
+aggregate(steps ~ date, data = stepData, FUN = median)
+```
+Note that the median function does not seem to be working properly with data tables.  It returns all 0's here.
 
 ## What is the average daily activity pattern?
+```{r}
+plot(aggregate(steps ~ interval, data = stepData, FUN = mean), type = "l",
+	xlab = "Interval", ylab = "Steps", main = "Average Number of Steps Across All Days")
+```
 
+### Which 5-minute interval, on average across all days, contains the maximum number of steps?
+```{r}
+max(stepData$steps, na.rm = TRUE)
+```
 
+## Imputing Missing Values
+### Calculate and report the total number of missing values in the dataset
+```{r}
+sum(is.na(stepData))
+```
 
-## Imputing missing values
+### Fill in missing data
+I'm using the mean steps of the original dataset as a constant to fill in every missing value.
+```{r}
+stepData <- read.csv("activity.csv")
+stepData2 <- stepData
+meanStep <- mean(na.omit(stepData$steps))
+stepData2$steps[is.na(stepData2$steps)] <- meanStep
+stepData2$date <- as.Date(stepData2$date, format = "%Y-%m-%d")
+```
 
+### Make a histogram of total number of steps for each day with filled dataset
+```{r}
+steps2 <- aggregate(steps ~ date, data = stepData2, FUN = sum)
 
+par(mfrow = c(1, 2))
+plot(steps, type = "h", lwd = 5, xlab = "Date", ylab = "Steps",
+	main = "Total Steps with NAs")
+plot(steps2, type = "h", lwd = 5, xlab = "Date", ylab = "Steps",
+	main = "Total Steps with NAs Filled")
+```
+The filled dataset has less gaps overall, making for a somewhat smoother curve.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+### Create a new factor variable in the dataset with two levels - "weekday" and "weekend"
+Using the filled dataset
+```{r}
+stepData2$dayOfWeek <- factor(format(stepData2$date, "%A"))
+levels(stepData2$dayOfWeek) <- list(weekday = c("Monday", "Tuesday", "Wednesday",
+											                        "Thursday, Friday"),
+								                    weekend = c("Saturday", "Sunday"))
+```
+
+### Make a times series panel plot of average number of steps taken across all weekdays or weekend days.
+```{r}
+par(mfrow = c(2, 1))
+with(stepData2[stepData2$dayOfWeek == "weekday",],
+	plot(aggregate(steps ~ interval, FUN = mean), type = "l",
+		xlab = "Interval", ylab = "Steps", main = "Weekday Step Totals"))
+with(stepData2[stepData2$dayOfWeek == "weekend",],
+	plot(aggregate(steps ~ interval, FUN = mean), type = "l",
+		xlab = "Interval", ylab = "Steps", main = "Weekend Step Totals"))
+```
